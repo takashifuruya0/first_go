@@ -1,240 +1,121 @@
 package main
 
 import (
+	"encoding/json"
+	"firstGo/modules/basic"
+	"firstGo/modules/channel"
+	"firstGo/modules/listen"
+	"firstGo/modules/model"
+	"firstGo/modules/speaker"
 	"fmt"
-	"sort"
-	"sync"
+	"io/fs"
+	"log"
+	"path/filepath"
+	"time"
 )
 
+func main() {
+	is_run := false
+	if is_run {
+		run()
+		// basic
+		basic.Run()
+		// channel
+		channel.Run()
+	}
+	// listen
+	is_listen := false
+	if is_listen {
+		listen.Run()
+	}
+	// time
+	runTime()
+}
 
-func main () {
-	a := 5
-	b := 3
-	// comment
-	var (
-		c int
-		e error 
+func runTime() {
+	// time
+	now := time.Now()
+	// 1月2日 3時4分5秒 2006年 +007
+	log.Println(now.Format("2006-01-02 15:04:05"))
+	log.Println(now.Format(time.DateOnly))
+	// duration
+	d, err := time.ParseDuration("5s")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(d)
+	now2 := now.Add(d)
+	dd := now2.Sub(now)
+	log.Println(now)
+	log.Println(now2)
+	log.Println(dd)
+
+	// filepath
+	p := "/Users/takashifuruya/Documents/work_go/first_go/main.go"
+	println(filepath.Base(p))
+	println(filepath.Dir(p))
+	pd := "/Users/takashifuruya/..Documents/../first_go/main.go"
+	if filepath.IsAbs(pd) == false {
+		println(filepath.Clean(pd))
+	}
+	absolute, err := filepath.Rel("/test", "/test/ok/hello.txt")
+	if err == nil {
+		println(absolute)
+	}
+	files := []string{}
+	filepath.WalkDir(
+		".",
+		func(path string, info fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+			files = append(files, path)
+			return nil
+		},
 	)
-	c, e = add(a, b)
-	if e != nil {
-		fmt.Println(e)
+	if err != nil {
+		log.Fatal(err)
 	}
-	var n string = "Hello"
-	m := "World"
-	fmt.Println(n, m, c)
+	fmt.Println(files)
+}
 
-	// list
-	var sl []int
-	var li [5]int
-	sl = make([]int, 3)
-	sl[0] = 1
-	sl[1] = 2
-	sl[2] = 3
-	fmt.Println(sl)
-	li[0] = 3
-	fmt.Println(li)
-
-	// 2-dimension array
-	arr1 := [2][3]int {
-		{1, 2, 3},
-		{4, 5, 6},
-	}
-	arr2 := [][]int {
-		{1,2,3,4},
-		{5,6,7},
-		{8,9},
-	}
-	fmt.Println(arr1)
-	fmt.Println(arr2)
-	// append
-	arr3 := append(arr2, []int{10, 11, 12})
-	fmt.Println(arr3)
-	// for loop
-	for i := 0; i < len(arr2); i++ {
-		for j := 0; j < len(arr2[i]); j++ {
-			fmt.Println(arr2[i][j])
-		}
-	}
-	
-	// string
-	s := "Hello"
-	fmt.Println(s)
-	// byte
-	bb := []byte(s)
-	bb[0] = 'h'
-	s = string(bb)
-	fmt.Println(s)
-	// rune: code-point row in unicode
-	rs := []rune(s)
-	rs[0] = 'は'
-	s = string(rs)
-	fmt.Println(s)
-	// 
-	var content = `
-	複数行の
-	文章からなる
-	テストです。
-	`
-	fmt.Println(content)
-	// map
-	mm := make(map[string]int)
-	mm["hello"] = 1
-	mm["OK"] = 2
-	fmt.Println(mm)
-	// map initialization
-	mmm := map[string]int {
-		"John": 1,
-		"Bob": 2,
-		"太郎": 3,
-	}
-	fmt.Println(mmm)
-	// for loop with map
-	for k, v := range mmm {
-		fmt.Printf("key is %v, value is %d\n", k, v)
-	}
-	keys := []string{}
-	for k := range mmm {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for i, k := range keys {
-		fmt.Printf(
-			"%d: key is %v, value is %v\n", 
-			i, k, mmm[k])
-	}
-
+func run() {
 	// struct
-	var user1 User
+	var user1 model.User
 	user1.Name = "たろう"
 	user1.Age = 22
 	fmt.Println(user1)
 	user1.UpdateName("じろう")
 	fmt.Println(user1)
 	// constructer
-	user2 := *NewUser("David", 35)
+	user2 := *model.NewUser("David", 35)
 	fmt.Println(user2)
+
 	// interface
-	dog := Dog{}
-	DoSpeak(&dog) // &; pointer of a value
-	cat := Cat{}
-	DoSpeak(&cat)
+	dog := speaker.Dog{}
+	speaker.DoSpeak(&dog) // &; pointer of a value
+	cat := speaker.Cat{}
+	speaker.DoSpeak(&cat)
 
-	// defer
-	defer func() {
-		fmt.Println("Defer no-name function")
-	}()
-	defer fmt.Println("Defer2")
-	defer fmt.Println("Defer1")
-	fmt.Println("Before Defer")
-
-	// goroutine
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	num := 0
-	for i := 0; i < 1000; i++ {
-		v := i
-		// fmt.Printf("goroutine %d\n", v)
-		wg.Add(1)
-		go func(){
-			defer wg.Done()
-			fmt.Printf("goroutine %d\n", v)
-			// Prevent num from being updated at the same time
-			mu.Lock()
-			num += 1
-			mu.Unlock()
-		}()
-	}
-	// Wait until wg counter become 0
-	wg.Wait()
-	fmt.Printf("Num: %d\n", num)
-
-	// channel
-	ch := make(chan string)
-	go server(ch)
-	for ss := range ch {
-		fmt.Println(ss)	
-	}
-	// var ss string
-	// ss = <- ch
-	// fmt.Println(ss)
-	// ss = <- ch
-	// fmt.Println(ss)
-	// ss = <- ch
-	// fmt.Println(ss)
-	ch2 := make(chan string)
-	go server(ch2)
-	counter := 0
-	for {
-		select {
-		case ss := <- ch2:
-			if ss == "" {
-				fmt.Println("Completed")
-				return
-			}else{
-				fmt.Println(ss)
-			}
-		default:
-			counter ++
-			if counter > 1000 {
-				break
-			} else {
-				fmt.Printf("waiting %d\n", counter)
-			}
+	// json
+	var content2 = `
+	{
+		"species": "ハト",
+		"description": "岩にとまるのが好き",
+		"dimensions": {
+			"height": 24,
+			"width": 10
 		}
 	}
-
-}
-
-func add (a int, b int) (int, error) {
-	c := a + b
-	return c, nil
-}
-
-type User struct {
-	Name string
-	Age int
-}
-
-// *; type definition for a pointer of a value
-func (user *User) UpdateName (newName string) {
-	oldName := user.Name
-	user.Name = newName
-	fmt.Printf("Update Name; %v --> %v\n", oldName, newName)
-}
-
-func NewUser(name string, age int) *User {
-	return &User {
-		Name: name,
-		Age: age,
+	`
+	var data model.Data
+	err := json.Unmarshal([]byte(content2), &data)
+	if err != nil {
+		fmt.Println("error")
+		log.Fatal(err)
 	}
-}
-
-type Speaker interface {
-	Speak() error
-}
-
-type Dog struct {}
-
-func (d *Dog) Speak() error {
-	fmt.Println("BowWow")
-	return nil
-}
-
-type Cat struct {}
-
-func (c *Cat) Speak() error {
-	fmt.Println("Meow")
-	return nil
-}
-
-func DoSpeak (s Speaker) error {
-	return s.Speak()
-}
-
-// channel
-func server (ch chan string) {
-	defer close(ch)
-	ch <- "one"
-	ch <- "two"
-	ch <- "three"
+	fmt.Println(data)
 }
